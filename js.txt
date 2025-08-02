@@ -1,0 +1,116 @@
+const MAX_POINTS = 10;
+let relayStates = {
+  node1: "OFF",
+  node2: "OFF"
+};
+
+const chart1 = new Chart(document.getElementById("chart1"), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: "Temp", data: [], borderColor: "red", fill: false },
+      { label: "Hum", data: [], borderColor: "blue", fill: false },
+      { label: "Gas", data: [], borderColor: "green", fill: false }
+    ]
+  },
+  options: { responsive: true }
+});
+
+const chart2 = new Chart(document.getElementById("chart2"), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: "Temp", data: [], borderColor: "orange", fill: false },
+      { label: "Hum", data: [], borderColor: "purple", fill: false },
+      { label: "Distance", data: [], borderColor: "gray", fill: false }
+    ]
+  },
+  options: { responsive: true }
+});
+
+function updateCharts(data) {
+  const time = new Date().toLocaleTimeString();
+
+  chart1.data.labels.push(time);
+  chart1.data.datasets[0].data.push(data.node1.temp);
+  chart1.data.datasets[1].data.push(data.node1.hum);
+  chart1.data.datasets[2].data.push(data.node1.gas);
+  if (chart1.data.labels.length > MAX_POINTS) {
+    chart1.data.labels.shift();
+    chart1.data.datasets.forEach(ds => ds.data.shift());
+  }
+
+  chart2.data.labels.push(time);
+  chart2.data.datasets[0].data.push(data.node2.temp);
+  chart2.data.datasets[1].data.push(data.node2.hum);
+  chart2.data.datasets[2].data.push(data.node2.distance);
+  if (chart2.data.labels.length > MAX_POINTS) {
+    chart2.data.labels.shift();
+    chart2.data.datasets.forEach(ds => ds.data.shift());
+  }
+
+  chart1.update();
+  chart2.update();
+}
+
+function updateUI(data) {
+  document.getElementById("temp1").innerText = data.node1.temp;
+  document.getElementById("hum1").innerText = data.node1.hum;
+  document.getElementById("gas1").innerText = data.node1.gas;
+  document.getElementById("relay1").innerText = data.node1.relay;
+  document.getElementById("temp2").innerText = data.node2.temp;
+  document.getElementById("hum2").innerText = data.node2.hum;
+  document.getElementById("motion2").innerText = data.node2.motion ? "Yes" : "No";
+  document.getElementById("distance2").innerText = data.node2.distance;
+  document.getElementById("relay2").innerText = data.node2.relay;
+
+  relayStates.node1 = data.node1.relay;
+  relayStates.node2 = data.node2.relay;
+  updateRelayButton("node1");
+  updateRelayButton("node2");
+
+  const alert1 = [];
+  if (data.node1.temp > 40) alert1.push("Warning: High Temp!");
+  if (data.node1.gas > 400) alert1.push("Warning: High Gas!");
+  document.getElementById("alert1").innerText = alert1.join(" ");
+
+  const alert2 = [];
+  if (data.node2.motion) alert2.push("Motion detected!");
+  if (data.node2.distance < 30) alert2.push("Presence detected nearby!");
+  document.getElementById("alert2").innerText = alert2.join(" ");
+}
+
+function updateRelayButton(node) {
+  const btn = document.getElementById(`relayBtn${node === "node1" ? "1" : "2"}`);
+  const state = relayStates[node];
+  btn.textContent = state === "ON" ? "ON" : "OFF";
+  btn.className = state === "ON"
+    ? "bg-red-500 text-white px-6 py-2 rounded-xl hover:opacity-90 transition"
+    : "bg-green-500 text-white px-6 py-2 rounded-xl hover:opacity-90 transition";
+}
+
+function toggleRelay(node) {
+  const newState = relayStates[node] === "ON" ? "OFF" : "ON";
+  fetch(`/api/relay?cmd=${newState}&node=${node}`)
+    .then(res => res.json())
+    .then(data => {
+      relayStates[node] = data.relay;
+      updateRelayButton(node);
+    })
+    .catch(err => console.error("API error:", err));
+}
+
+function fetchData() {
+  fetch("/api/data")
+    .then(res => res.json())
+    .then(data => {
+      updateUI(data);
+      updateCharts(data);
+    })
+    .catch(err => console.error("Fetch error:", err));
+}
+
+setInterval(fetchData, 3000);
+

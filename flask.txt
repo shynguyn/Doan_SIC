@@ -1,0 +1,83 @@
+from flask import Flask, render_template, jsonify, request
+import paho.mqtt.client as mqtt
+import paho.mqtt.publish as publish
+import json
+import mysql.connector
+
+app = Flask(__name__)
+
+node1 = {"temp": 0, "hum": 0, "gas": 0, "relay": "OFF"}
+node2 = {"temp": 0, "hum": 0, "motion": 0, "distance": 0, "relay": "OFF"}
+
+def on_connect(client, userdata, flags, rc):
+    print("MQTT connected")
+    client.subscribe("sensor/node1")
+    client.subscribe("sensor/node2")
+
+def on_message(client, userdata, msg):
+    global node1, node2
+    try:
+        payload = json.loads(msg.payload.decode())
+        print(f"[{msg.topic}] {payload}")
+
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="iotuser",
+            password="123456",
+            database="iot_data"
+        )
+        cursor = conn.cursor()
+
+        if msg.topic == "sensor/node1":
+            node1.update(payload)
+            cursor.execute("""
+                INSERT INTO node1 (temp, hum, gas, timestamp)
+                VALUES (%s, %s, %s, NOW())
+            """, (payload["temp"], payload["hum"], payload["gas"]))
+
+        elif msg.topic == "sensor/node2":
+            node2.update(payload)
+            cursor.execute("""
+                INSERT INTO node2 (temp, hum, motion, distance, timestamp)
+                VALUES (%s, %s, %s, %s, NOW())
+            """, (payload["temp"], payload["hum"], payload["motion"], payload["distance"]))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        print("Loi xu ly JSON hoac MySQL:", e)
+
+mqtt_broker = "localhost"
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
+client.connect(mqtt_broker, 1883, 60)
+client.loop_start()
+
+@app.route("/")
+def index():
+    return render_template("index.html", node1=node1, node2=node2)
+
+@app.route("/api/data")
+def api_data():
+    return jsonify({"node1": node1, "node2": node2})
+
+@app.route("/api/relay")
+def api_relay():
+    cmd = request.args.get("cmd", "OFF")
+    node = request.args.get("node", "node1")
+    topic = f"control/{node}/relay"
+    try:
+        publish.single(topic, cmd, hostname=mqtt_broker)
+        if node == "node1":
+            node1["relay"] = cmd
+        else:
+            node2["relay"] = cmd
+        return jsonify({"status": "ok", "relay": cmd})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

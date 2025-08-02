@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart Home Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans p-6">
+  <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Smart Home</h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+    <!-- INDOORS -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
+      <h3 style="text-align: center;" class="text-xl font-semibold text-blue-600 mb-4">INDOORS</h3>
+      <p class="text-gray-700">Temperature: <span id="temp1" class="font-bold">--</span> &#8451;</p>
+      <p class="text-gray-700">Humidity: <span id="hum1" class="font-bold">--</span> &#37;</p>
+      <p class="text-gray-700">Gas: <span id="gas1" class="font-bold">--</span></p>
+      <p class="text-gray-700">Relay: <span id="relay1" class="font-bold">--</span></p>
+      <p id="alert1" class="text-red-600 font-semibold mt-2"></p>
+      <canvas id="chart1" class="mt-4"></canvas>
+      <div style="text-align: center;" class="mt-4">
+        <button id="relayBtn1"
+                onclick="toggleRelay('node1')"
+                class="bg-gray-500 text-white px-6 py-2 rounded-xl hover:opacity-90 transition">
+          Loading...
+        </button>
+      </div>
+    </div>
+
+    <!-- Node 2 -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
+      <h3 style="text-align: center;" class="text-xl font-semibold text-green-600 mb-4">OUTDOORS</h3>
+      <p class="text-gray-700">Temperature: <span id="temp2" class="font-bold">--</span> &#8451;</p>
+      <p class="text-gray-700">Humidity: <span id="hum2" class="font-bold">--</span> &#37;</p>
+      <p class="text-gray-700">Motion: <span id="motion2" class="font-bold">--</span></p>
+      <p class="text-gray-700">Distance: <span id="distance2" class="font-bold">--</span> cm</p>
+      <p class="text-gray-700">Relay: <span id="relay2" class="font-bold">--</span></p>
+      <p id="alert2" class="text-red-600 font-semibold mt-2"></p>
+      <canvas id="chart2" class="mt-4"></canvas>
+      <div style="text-align: center;" class="mt-4">
+        <button id="relayBtn2"
+                onclick="toggleRelay('node2')"
+                class="bg-gray-500 text-white px-6 py-2 rounded-xl hover:opacity-90 transition">
+          Loading...
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
+
